@@ -1,0 +1,1330 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0b0b0b" />
+  <meta name="description" content="A cinematic film and video portfolio." />
+  <title>Film / Video Portfolio</title>
+  <script>
+    /* Required configuration constants — kept at the top and used throughout. */
+    const VITE_SUPABASE_URL = `https://lwvwgjhcvkleyytbmbxh.supabase.co/rest/v1/
+`;   // .supabase.co (NOT .com)
+    const VITE_SUPABASE_PUBLISHABLE_KEY = "sb_publishable_W1dzJGL9CwX7xWXIzR96gQ_XWUfZ_VK";
+    const VITE_SUPABASE_STORAGE_BUCKET = "portfolio-media";
+    const VITE_YOUTUBE_CHANNEL_URL = "[https://youtu.be/RGucZx3TUnc?si=AYcHYSomG3sFjZGM](https://www.youtube.com/)";
+    const VITE_INSTAGRAM_URL = "[https://www.instagram.com/)";   // TODO: set the real Instagram URL
+    const VITE_THREADS_URL = "[https://blog.naver.com/itree0607/](https://www.threads.net/)";       // TODO: set the real Threads URL
+    const VITE_LOGO_SRC = "./logo.png";                        // TODO: replace with the TPC logo (file next to index.html, base64 data URI, or inline SVG)
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" defer></script>
+  <style>
+    :root {
+      --ink: #11110f;
+      --paper: #f4f0e8;
+      --paper-2: #eae4d9;
+      --line: rgba(17,17,15,.18);
+      --muted: #6b675f;
+      --accent: #ff5c35;
+      --accent-2: #efc94c;
+      --white: #fffdf8;
+      --black: #080807;
+      --max: 1440px;
+      --radius: 20px;
+      --serif: Georgia, 'Times New Roman', serif;
+      --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; background: var(--paper); }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--paper);
+      font-family: var(--sans);
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+    body.modal-open { overflow: hidden; }
+    button, input, textarea, select { font: inherit; }
+    button { cursor: pointer; }
+    a { color: inherit; text-decoration: none; }
+    img, video { display: block; max-width: 100%; }
+    ::selection { background: var(--accent); color: var(--white); }
+
+    .skip-link {
+      position: fixed; left: 16px; top: -60px; z-index: 200;
+      background: var(--white); color: var(--ink); padding: 10px 14px; border-radius: 10px;
+      transition: top .2s ease;
+    }
+    .skip-link:focus { top: 16px; }
+
+    .site-shell { max-width: var(--max); margin: 0 auto; padding: 0 28px; }
+    .eyebrow {
+      display: inline-flex; align-items: center; gap: 10px;
+      margin: 0; font-size: 11px; line-height: 1.2; letter-spacing: .14em; text-transform: uppercase; font-weight: 750;
+    }
+    .eyebrow::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+    .section-heading {
+      margin: 0; font-family: var(--serif); font-weight: 400;
+      font-size: clamp(42px, 6.5vw, 94px); line-height: .91; letter-spacing: -.065em;
+    }
+    .section-copy { max-width: 420px; margin: 0; color: var(--muted); font-size: 15px; line-height: 1.65; }
+    .button {
+      display: inline-flex; justify-content: center; align-items: center; gap: 10px;
+      min-height: 46px; padding: 0 18px; border: 1px solid var(--ink); background: transparent; color: var(--ink);
+      border-radius: 999px; font-size: 12px; font-weight: 750; letter-spacing: .04em; text-transform: uppercase;
+      transition: transform .2s ease, background .2s ease, color .2s ease, border-color .2s ease;
+    }
+    .button:hover { transform: translateY(-2px); background: var(--ink); color: var(--white); }
+    .button:focus-visible, .icon-button:focus-visible, .nav-link:focus-visible, .filter-button:focus-visible,
+    .close-button:focus-visible, .text-button:focus-visible { outline: 3px solid rgba(255,92,53,.5); outline-offset: 3px; }
+    .button--solid { background: var(--ink); color: var(--white); }
+    .button--solid:hover { background: var(--accent); border-color: var(--accent); color: var(--white); }
+    .button--light { border-color: rgba(255,255,255,.55); color: var(--white); }
+    .button--light:hover { background: var(--white); color: var(--ink); }
+    .button--small { min-height: 36px; padding: 0 13px; font-size: 10px; }
+    .button[disabled] { opacity: .52; cursor: not-allowed; transform: none; }
+
+    /* Header */
+    .header-wrap { position: fixed; top: 0; left: 0; right: 0; z-index: 50; pointer-events: none; }
+    .header {
+      max-width: var(--max); margin: 0 auto; padding: 18px 28px;
+      display: flex; align-items: center; justify-content: space-between; gap: 24px;
+      pointer-events: auto; transition: padding .24s ease;
+    }
+    .header::before {
+      content: ''; position: absolute; inset: 0; z-index: -1; opacity: 0;
+      background: rgba(244,240,232,.88); border-bottom: 1px solid transparent; backdrop-filter: blur(14px);
+      transition: opacity .24s ease, border-color .24s ease;
+    }
+    .header.is-scrolled { padding-top: 11px; padding-bottom: 11px; }
+    .header.is-scrolled::before { opacity: 1; border-color: var(--line); }
+    .brand { display: inline-flex; align-items: center; gap: 10px; min-width: 0; }
+    .brand-mark {
+      width: 34px; height: 34px; overflow: hidden; display: grid; place-items: center; flex: 0 0 auto;
+      border: 1px solid var(--ink); border-radius: 50%; background: var(--ink); color: var(--paper);
+    }
+    .brand-mark img { width: 100%; height: 100%; object-fit: contain; }
+    .brand-name { max-width: 205px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; line-height: 1; font-weight: 850; letter-spacing: .08em; text-transform: uppercase; }
+    .nav { display: flex; align-items: center; gap: 24px; }
+    .nav-link { position: relative; font-size: 11px; line-height: 1; font-weight: 720; letter-spacing: .08em; text-transform: uppercase; }
+    .nav-link::after { content: ''; position: absolute; left: 0; right: 0; bottom: -7px; height: 1px; transform: scaleX(0); transform-origin: left; background: var(--ink); transition: transform .2s ease; }
+    .nav-link:hover::after { transform: scaleX(1); }
+    .admin-trigger { border: none; padding: 0; background: transparent; color: var(--ink); font-size: 11px; line-height: 1; font-weight: 720; letter-spacing: .08em; text-transform: uppercase; }
+    .admin-trigger:hover { color: var(--accent); }
+    .menu-trigger { display: none; }
+
+    /* Hero */
+    .hero { position: relative; min-height: min(850px, 100svh); display: flex; align-items: flex-end; padding: 132px 0 36px; background: var(--black); color: var(--white); overflow: hidden; }
+    .hero-media, .hero-media::after { position: absolute; inset: 0; }
+    .hero-media { z-index: 0; background: #25231f; }
+    .hero-media::after { content: ''; background: linear-gradient(180deg, rgba(5,5,4,.1) 0%, rgba(5,5,4,.22) 32%, rgba(5,5,4,.88) 100%); }
+    .hero-media img, .hero-media video { width: 100%; height: 100%; object-fit: cover; opacity: .88; }
+    .hero-no-media {
+      height: 100%; background:
+        radial-gradient(circle at 17% 20%, rgba(255,92,53,.92), transparent 28%),
+        radial-gradient(circle at 75% 18%, rgba(239,201,76,.55), transparent 23%),
+        linear-gradient(124deg, #12110f 0%, #2b241d 52%, #10100f 100%);
+    }
+    .hero-no-media::before, .hero-no-media::after { content: ''; position: absolute; border: 1px solid rgba(255,255,255,.2); border-radius: 50%; }
+    .hero-no-media::before { width: min(64vw,900px); aspect-ratio: 1; left: 37%; top: -25%; }
+    .hero-no-media::after { width: min(50vw,660px); aspect-ratio: 1; left: -16%; bottom: -45%; }
+    .hero-inner { position: relative; z-index: 1; width: 100%; }
+    .hero-topline { display: flex; justify-content: space-between; gap: 18px; align-items: flex-start; margin-bottom: clamp(65px,14vh,160px); }
+    .hero .eyebrow { color: rgba(255,255,255,.76); }
+    .hero-meta { margin: 0; max-width: 255px; font-size: 11px; line-height: 1.5; letter-spacing: .08em; color: rgba(255,255,255,.72); text-align: right; text-transform: uppercase; }
+    .hero-title { max-width: 1060px; margin: 0; font-family: var(--serif); font-size: clamp(62px, 12vw, 184px); font-weight: 400; line-height: .76; letter-spacing: -.09em; }
+    .hero-title em { font-style: italic; font-weight: 400; color: #ffd06a; }
+    .hero-bottom { display: flex; justify-content: space-between; align-items: flex-end; gap: 28px; margin-top: 34px; }
+    .hero-description { max-width: 440px; margin: 0; font-size: 15px; line-height: 1.55; color: rgba(255,255,255,.78); }
+    .hero-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+    .scroll-indicator { display: inline-flex; align-items: center; gap: 9px; color: rgba(255,255,255,.7); font-size: 10px; letter-spacing: .11em; text-transform: uppercase; }
+    .scroll-indicator::before { content: ''; display: block; width: 38px; height: 1px; background: currentColor; }
+
+    /* Work */
+    section { scroll-margin-top: 70px; }
+    .work { padding: clamp(90px, 11vw, 166px) 0; }
+    .work-intro { display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, .42fr); gap: 38px; align-items: end; padding-bottom: 44px; border-bottom: 1px solid var(--line); }
+    .work-intro-left { display: grid; gap: 20px; }
+    .filter-row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+    .filter-button { border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--muted); padding: 8px 12px; font-size: 10px; line-height: 1; text-transform: uppercase; letter-spacing: .08em; font-weight: 760; transition: background .2s ease, color .2s ease, border-color .2s ease; }
+    .filter-button:hover, .filter-button.is-active { color: var(--white); background: var(--ink); border-color: var(--ink); }
+    .work-grid { display: grid; grid-template-columns: repeat(12, minmax(0,1fr)); gap: 50px 18px; padding-top: 45px; }
+    .project-card { grid-column: span 6; min-width: 0; }
+    .project-card:nth-child(5n+1) { grid-column: span 7; }
+    .project-card:nth-child(5n+2) { grid-column: span 5; }
+    .project-card:nth-child(5n+4) { grid-column: span 5; }
+    .project-card:nth-child(5n) { grid-column: span 7; }
+    .project-card[hidden] { display: none; }
+    .project-card-button { display: block; width: 100%; padding: 0; border: 0; background: transparent; text-align: left; color: inherit; }
+    .project-image-wrap { position: relative; overflow: hidden; aspect-ratio: 1.39 / 1; background: #c9c2b5; }
+    .project-card:nth-child(3n+2) .project-image-wrap { aspect-ratio: 1 / 1.12; }
+    .project-card:nth-child(3n) .project-image-wrap { aspect-ratio: 1.65 / 1; }
+    .project-image-wrap img, .project-image-wrap video { width: 100%; height: 100%; object-fit: cover; transition: transform .6s cubic-bezier(.2,.75,.2,1), filter .4s ease; }
+    .project-card-button:hover .project-image-wrap img, .project-card-button:hover .project-image-wrap video { transform: scale(1.045); filter: contrast(1.05); }
+    .project-image-placeholder { position: absolute; inset: 0; display: grid; place-items: center; background: var(--placeholder, #c9c2b5); color: rgba(17,17,15,.65); font-family: var(--serif); font-size: clamp(40px, 7vw, 96px); font-style: italic; }
+    .project-image-overlay { position: absolute; inset: auto 0 0; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 16px; background: linear-gradient(180deg, transparent, rgba(0,0,0,.66)); color: var(--white); opacity: 0; transform: translateY(5px); transition: opacity .25s ease, transform .25s ease; }
+    .project-card-button:hover .project-image-overlay, .project-card-button:focus-visible .project-image-overlay { opacity: 1; transform: translateY(0); }
+    .project-image-overlay span { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; font-weight: 800; }
+    .round-arrow { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; background: var(--white); color: var(--ink); }
+    .project-meta { display: flex; gap: 18px; justify-content: space-between; padding-top: 15px; }
+    .project-title { margin: 0; max-width: 75%; font-family: var(--serif); font-weight: 400; font-size: clamp(24px,3vw,42px); line-height: .95; letter-spacing: -.05em; }
+    .project-detail { margin: 4px 0 0; max-width: 120px; color: var(--muted); font-size: 10px; line-height: 1.4; letter-spacing: .08em; text-align: right; text-transform: uppercase; }
+    .empty-state { grid-column: 1 / -1; display: grid; place-items: center; min-height: 360px; border: 1px dashed var(--line); background: rgba(255,255,255,.22); text-align: center; padding: 32px; }
+    .empty-state h3 { margin: 0 0 10px; font-family: var(--serif); font-size: 42px; font-weight: 400; letter-spacing: -.05em; }
+    .empty-state p { max-width: 460px; margin: 0; color: var(--muted); line-height: 1.6; font-size: 14px; }
+
+    /* Statement */
+    .statement { padding: clamp(70px, 10vw, 145px) 0; background: var(--ink); color: var(--paper); }
+    .statement-grid { display: grid; grid-template-columns: minmax(190px,.34fr) minmax(0,1fr); gap: 38px; }
+    .statement .eyebrow { color: rgba(244,240,232,.65); }
+    .statement-quote { margin: 0; font-family: var(--serif); font-size: clamp(42px, 7.4vw, 112px); line-height: .9; letter-spacing: -.065em; font-weight: 400; }
+    .statement-quote em { color: var(--accent-2); font-style: italic; }
+    .statement-details { display: flex; justify-content: flex-end; align-items: end; margin-top: clamp(45px,8vw,105px); }
+    .statement-details p { max-width: 380px; margin: 0; color: rgba(244,240,232,.72); font-size: 14px; line-height: 1.7; }
+
+    /* About */
+    .about { padding: clamp(92px, 11vw, 165px) 0; }
+    .about-grid { display: grid; grid-template-columns: minmax(0,1.2fr) minmax(280px,.8fr); gap: clamp(34px,8vw,116px); }
+    .about-content { display: grid; gap: 30px; }
+    .about-text { max-width: 690px; margin: 0; font-family: var(--serif); font-size: clamp(31px,4.1vw,64px); line-height: 1.02; letter-spacing: -.055em; }
+    .about-text strong { font-weight: 400; color: var(--accent); }
+    .facts { margin: 0; border-top: 1px solid var(--line); }
+    .fact { display: grid; grid-template-columns: 104px 1fr; gap: 10px; padding: 14px 0; border-bottom: 1px solid var(--line); }
+    .fact dt { color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+    .fact dd { margin: 0; font-size: 13px; line-height: 1.55; }
+    .contact-card { display: flex; flex-direction: column; justify-content: space-between; min-height: 385px; padding: 25px; background: #ded5c8; }
+    .contact-card h3 { max-width: 330px; margin: 24px 0 0; font-family: var(--serif); font-size: clamp(36px,4vw,58px); line-height: .9; font-weight: 400; letter-spacing: -.06em; }
+    .contact-card .button { align-self: flex-start; margin-top: 32px; }
+
+    /* Footer */
+    .footer { padding: 28px 0 24px; background: var(--paper-2); }
+    .footer-row { display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+    .footer-copy { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.5; letter-spacing: .08em; text-transform: uppercase; }
+    .socials { display: flex; gap: 18px; align-items: center; }
+    .social-link { font-size: 10px; line-height: 1; letter-spacing: .1em; text-transform: uppercase; font-weight: 800; }
+    .social-link:hover { color: var(--accent); }
+
+    /* Modals */
+    .modal-layer { position: fixed; inset: 0; z-index: 100; display: none; align-items: stretch; justify-content: center; background: rgba(8,8,7,.74); backdrop-filter: blur(8px); }
+    .modal-layer.is-open { display: flex; }
+    .modal { position: relative; width: min(1180px, 100%); max-height: 100svh; overflow: auto; background: var(--paper); animation: rise .25s ease both; }
+    @keyframes rise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+    .close-button { position: sticky; top: 20px; z-index: 4; float: right; width: 42px; height: 42px; margin: 20px; border: 1px solid var(--line); border-radius: 50%; background: rgba(244,240,232,.9); color: var(--ink); font-size: 20px; line-height: 1; transition: transform .2s ease, background .2s ease; }
+    .close-button:hover { background: var(--ink); color: var(--white); transform: rotate(90deg); }
+    .project-modal-body { clear: both; padding: 0 28px 46px; }
+    .project-modal-media { position: relative; overflow: hidden; min-height: min(65vh,720px); background: #c9c2b5; }
+    .project-modal-media img, .project-modal-media video, .project-modal-media iframe { width: 100%; height: min(65vh,720px); display: block; border: 0; object-fit: cover; }
+    .project-modal-media iframe { aspect-ratio: 16 / 9; background: var(--black); }
+    .project-modal-head { display: grid; grid-template-columns: minmax(0,1fr) minmax(220px,.38fr); gap: 34px; padding: 36px 0; border-bottom: 1px solid var(--line); }
+    .project-modal-title { margin: 9px 0 0; font-family: var(--serif); font-weight: 400; font-size: clamp(46px,7vw,95px); line-height: .82; letter-spacing: -.07em; }
+    .project-modal-info { display: grid; align-content: end; gap: 10px; }
+    .project-modal-info p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+    .project-modal-copy { display: grid; grid-template-columns: minmax(0,1fr) minmax(240px,.42fr); gap: 38px; padding: 34px 0 0; }
+    .project-modal-description { max-width: 720px; margin: 0; font-family: var(--serif); font-size: clamp(26px,3vw,42px); line-height: 1.1; letter-spacing: -.04em; }
+    .project-modal-credits { margin: 0; }
+    .project-modal-credits .fact { grid-template-columns: 88px 1fr; }
+    .modal-gallery { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 14px; margin-top: 42px; }
+    .modal-gallery img, .modal-gallery video { aspect-ratio: 4/3; width: 100%; object-fit: cover; }
+    .modal-gallery img:first-child, .modal-gallery video:first-child { grid-column: span 2; aspect-ratio: 16/8; }
+
+    /* Authentication */
+    .auth-modal { width: min(480px, calc(100% - 28px)); align-self: center; max-height: calc(100svh - 28px); border-radius: var(--radius); }
+    .auth-modal .close-button { position: absolute; right: 0; }
+    .auth-content { padding: 56px 30px 32px; }
+    .auth-content h2 { margin: 0 0 8px; font-family: var(--serif); font-size: 54px; line-height: .9; font-weight: 400; letter-spacing: -.065em; }
+    .auth-content > p { margin: 0 0 28px; color: var(--muted); font-size: 13px; line-height: 1.55; }
+    .form-grid { display: grid; gap: 14px; }
+    .field { display: grid; gap: 7px; }
+    .field label { font-size: 10px; letter-spacing: .09em; text-transform: uppercase; font-weight: 800; }
+    .field input, .field textarea, .field select { width: 100%; border: 1px solid var(--line); border-radius: 9px; background: rgba(255,255,255,.4); color: var(--ink); padding: 11px 12px; outline: none; transition: border-color .2s ease, box-shadow .2s ease; }
+    .field textarea { min-height: 102px; resize: vertical; line-height: 1.5; }
+    .field input:focus, .field textarea:focus, .field select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(255,92,53,.13); }
+    .form-help { margin: 6px 0 0; color: var(--muted); font-size: 11px; line-height: 1.45; }
+    .form-actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; }
+    .text-button { border: 0; padding: 0; background: transparent; color: var(--muted); font-size: 11px; text-decoration: underline; text-underline-offset: 3px; }
+    .text-button:hover { color: var(--accent); }
+
+    /* Admin */
+    .admin-drawer { position: fixed; z-index: 95; top: 0; right: 0; width: min(680px,100%); height: 100svh; overflow: auto; display: none; background: var(--paper); border-left: 1px solid var(--line); box-shadow: -18px 0 60px rgba(0,0,0,.16); }
+    .admin-drawer.is-open { display: block; animation: slide-in .3s ease both; }
+    @keyframes slide-in { from { transform: translateX(40px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    .admin-head { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 23px; background: rgba(244,240,232,.92); border-bottom: 1px solid var(--line); backdrop-filter: blur(12px); }
+    .admin-title-wrap { display: flex; align-items: center; gap: 10px; }
+    .admin-title-wrap h2 { margin: 0; font-family: var(--serif); font-size: 31px; line-height: 1; font-weight: 400; letter-spacing: -.05em; }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #53a967; }
+    .admin-content { padding: 26px 23px 42px; }
+    .admin-section { padding: 0 0 28px; margin-bottom: 28px; border-bottom: 1px solid var(--line); }
+    .admin-section:last-child { margin-bottom: 0; border-bottom: 0; }
+    .admin-section h3 { margin: 0 0 6px; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; }
+    .admin-section > p { margin: 0 0 17px; color: var(--muted); font-size: 12px; line-height: 1.55; }
+    .admin-project-list { display: grid; gap: 8px; margin-top: 18px; }
+    .admin-project-row { display: flex; align-items: center; gap: 9px; padding: 9px; border: 1px solid var(--line); border-radius: 11px; }
+    .admin-project-thumb { width: 46px; height: 38px; background: #c9c2b5; object-fit: cover; }
+    .admin-project-name { min-width: 0; flex: 1; }
+    .admin-project-name strong, .admin-project-name span { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+    .admin-project-name strong { font-size: 12px; }
+    .admin-project-name span { margin-top: 2px; color: var(--muted); font-size: 9px; text-transform: uppercase; letter-spacing: .08em; }
+    .icon-button { display: grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 1px solid var(--line); border-radius: 50%; background: transparent; color: var(--ink); }
+    .icon-button:hover { background: var(--ink); color: var(--white); }
+    .admin-project-form { display: none; gap: 13px; padding: 16px; margin-top: 16px; border: 1px solid var(--ink); background: rgba(255,255,255,.34); }
+    .admin-project-form.is-open { display: grid; }
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; }
+    .check-field { display: flex; align-items: center; gap: 9px; font-size: 12px; }
+    .check-field input { width: 16px; height: 16px; accent-color: var(--accent); }
+    .upload-zone { display: grid; gap: 8px; padding: 12px; border: 1px dashed rgba(17,17,15,.36); background: rgba(255,255,255,.35); }
+    .upload-zone input[type=file] { width: 100%; font-size: 11px; }
+    .upload-status { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.4; }
+    .admin-notice { padding: 14px; border: 1px solid rgba(255,92,53,.45); background: rgba(255,92,53,.08); color: #71301f; font-size: 12px; line-height: 1.55; }
+    .admin-notice strong { color: var(--ink); }
+    .code-panel { position: relative; margin-top: 13px; }
+    .code-panel pre { max-height: 310px; margin: 0; overflow: auto; padding: 14px; background: #151513; color: #e9e0d4; border-radius: 10px; font: 10px/1.52 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; white-space: pre; }
+    .copy-code { position: absolute; right: 8px; top: 8px; }
+
+    .toast-region { position: fixed; right: 18px; bottom: 18px; z-index: 220; display: grid; gap: 9px; width: min(360px, calc(100% - 36px)); }
+    .toast { padding: 13px 15px; background: var(--ink); color: var(--white); border-radius: 10px; box-shadow: 0 14px 35px rgba(0,0,0,.2); font-size: 12px; line-height: 1.45; animation: toast-in .24s ease both; }
+    .toast.error { background: #8a2a1c; }
+    .toast.success { background: #235c3a; }
+    @keyframes toast-in { from { transform: translateY(8px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+
+    @media (max-width: 780px) {
+      .site-shell { padding-left: 18px; padding-right: 18px; }
+      .header { padding-left: 18px; padding-right: 18px; }
+      .nav { display: none; position: fixed; top: 64px; right: 18px; left: 18px; flex-direction: column; align-items: stretch; gap: 0; padding: 10px; background: var(--paper); border: 1px solid var(--line); box-shadow: 0 14px 35px rgba(0,0,0,.1); }
+      .nav.is-open { display: flex; }
+      .nav-link, .admin-trigger { padding: 13px 10px; width: 100%; text-align: left; }
+      .nav-link::after { display: none; }
+      .menu-trigger { display: inline-flex; }
+      .brand-name { max-width: 150px; }
+      .hero { padding-top: 108px; min-height: 680px; }
+      .hero-topline { margin-bottom: 75px; }
+      .hero-meta { display: none; }
+      .hero-title { font-size: clamp(61px,17vw,108px); }
+      .hero-bottom { flex-direction: column; align-items: flex-start; }
+      .hero-actions { justify-content: flex-start; }
+      .scroll-indicator { display: none; }
+      .work-intro, .statement-grid, .about-grid, .project-modal-head, .project-modal-copy { grid-template-columns: 1fr; }
+      .filter-row { justify-content: flex-start; }
+      .work-grid { grid-template-columns: 1fr; gap: 35px; }
+      .project-card, .project-card:nth-child(n) { grid-column: span 1; }
+      .project-card:nth-child(3n+2) .project-image-wrap, .project-card:nth-child(3n) .project-image-wrap { aspect-ratio: 1.38 / 1; }
+      .statement-details { justify-content: flex-start; }
+      .about-grid { gap: 48px; }
+      .contact-card { min-height: 310px; }
+      .footer-row { align-items: flex-start; flex-direction: column-reverse; }
+      .project-modal-body { padding-left: 18px; padding-right: 18px; }
+      .project-modal-media { margin-left: -18px; margin-right: -18px; }
+      .project-modal-media img, .project-modal-media video, .project-modal-media iframe { height: 48vh; }
+      .project-modal-copy { gap: 30px; }
+      .modal-gallery { grid-template-columns: 1fr; }
+      .modal-gallery img:first-child, .modal-gallery video:first-child { grid-column: span 1; }
+      .field-row { grid-template-columns: 1fr; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .001ms !important; transition-duration: .001ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#work">Skip to work</a>
+
+  <div class="header-wrap">
+    <header class="header" id="siteHeader">
+      <a class="brand" href="#top" aria-label="Back to top">
+        <span class="brand-mark" id="brandMark" aria-hidden="true">
+          <span id="brandFallback">TP</span>
+          <img id="logoImage" alt="" hidden />
+        </span>
+        <span class="brand-name" id="brandName">Film / Video</span>
+      </a>
+      <nav class="nav" id="primaryNav" aria-label="Primary navigation">
+        <a class="nav-link" href="#work">Work</a>
+        <a class="nav-link" href="#about">About</a>
+        <a class="nav-link" href="#contact">Contact</a>
+        <button class="admin-trigger" id="adminTrigger" type="button">Studio</button>
+      </nav>
+      <button class="button button--small menu-trigger" id="menuTrigger" type="button" aria-expanded="false" aria-controls="primaryNav">Menu</button>
+    </header>
+  </div>
+
+  <main id="top">
+    <section class="hero" aria-labelledby="heroTitle">
+      <div class="hero-media" id="heroMedia" aria-hidden="true"><div class="hero-no-media"></div></div>
+      <div class="hero-inner site-shell">
+        <div class="hero-topline">
+          <p class="eyebrow" id="heroEyebrow">Director · Editor · Storyteller</p>
+          <p class="hero-meta" id="heroMeta">Based in Seoul · Available for select collaborations</p>
+        </div>
+        <h1 class="hero-title" id="heroTitle">Frames that<br><em>stay</em> with you.</h1>
+        <div class="hero-bottom">
+          <p class="hero-description" id="heroDescription">A film and video portfolio for short films, moving-image experiments, and considered visual narratives.</p>
+          <div class="hero-actions">
+            <a class="button button--light" href="#work">Selected work <span aria-hidden="true">↓</span></a>
+            <a class="button button--light" id="showreelLink" href="#work">Showreel <span aria-hidden="true">↗</span></a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="work site-shell" id="work" aria-labelledby="workTitle">
+      <div class="work-intro">
+        <div class="work-intro-left">
+          <p class="eyebrow">Selected work</p>
+          <h2 class="section-heading" id="workTitle">Stories in<br>motion.</h2>
+        </div>
+        <div>
+          <p class="section-copy" id="workIntroCopy">A selection of film, commercial, music video, and experimental moving-image work.</p>
+          <div class="filter-row" id="filterRow" aria-label="Filter projects"></div>
+        </div>
+      </div>
+      <div class="work-grid" id="projectGrid" aria-live="polite"></div>
+    </section>
+
+    <section class="statement" aria-labelledby="statementTitle">
+      <div class="site-shell statement-grid">
+        <p class="eyebrow">Approach</p>
+        <div>
+          <h2 class="statement-quote" id="statementTitle">I look for the <em>human</em> detail inside every frame.</h2>
+          <div class="statement-details"><p id="statementCopy">From first treatment to final grade, I build images with a clear emotional point of view—where rhythm, texture, and performance make the idea felt.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="about site-shell" id="about" aria-labelledby="aboutTitle">
+      <div class="about-grid">
+        <div class="about-content">
+          <p class="eyebrow">About</p>
+          <h2 class="about-text" id="aboutTitle">I make moving images that are <strong>precise, tactile,</strong> and open to interpretation.</h2>
+          <a class="button" id="aboutShowreelLink" href="#work">View showreel <span aria-hidden="true">↗</span></a>
+        </div>
+        <div>
+          <dl class="facts" id="aboutFacts">
+            <div class="fact"><dt>Based</dt><dd id="factLocation">Seoul, South Korea</dd></div>
+            <div class="fact"><dt>Focus</dt><dd id="factFocus">Directing · Editing · Cinematography</dd></div>
+            <div class="fact"><dt>Available</dt><dd id="factAvailability">Freelance / Collaborations</dd></div>
+          </dl>
+          <div class="contact-card" id="contact">
+            <p class="eyebrow">Start a conversation</p>
+            <h3>Let’s make something worth replaying.</h3>
+            <a class="button button--solid" id="emailLink" href="mailto:hello@example.com">Get in touch <span aria-hidden="true">↗</span></a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="site-shell footer-row">
+      <p class="footer-copy" id="footerCopy">© 2026 Film / Video Portfolio</p>
+      <div class="socials" aria-label="Social links">
+        <a class="social-link" id="youtubeLink" href="#" target="_blank" rel="noopener noreferrer">YouTube</a>
+        <a class="social-link" id="instagramLink" href="#" target="_blank" rel="noopener noreferrer">Instagram</a>
+        <a class="social-link" id="threadsLink" href="#" target="_blank" rel="noopener noreferrer">Threads</a>
+      </div>
+    </div>
+  </footer>
+
+  <div class="modal-layer" id="projectModalLayer" aria-hidden="true">
+    <article class="modal" id="projectModal" role="dialog" aria-modal="true" aria-labelledby="projectModalTitle">
+      <button class="close-button" type="button" data-close-modal aria-label="Close project">×</button>
+      <div class="project-modal-body" id="projectModalContent"></div>
+    </article>
+  </div>
+
+  <div class="modal-layer" id="authModalLayer" aria-hidden="true">
+    <section class="modal auth-modal" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+      <button class="close-button" type="button" data-close-auth aria-label="Close studio login">×</button>
+      <div class="auth-content">
+        <p class="eyebrow">Private access</p>
+        <h2 id="authTitle">Studio login</h2>
+        <p>Sign in with the Supabase Auth account approved as a portfolio administrator.</p>
+        <form class="form-grid" id="loginForm">
+          <div class="field"><label for="loginEmail">Email</label><input id="loginEmail" name="email" type="email" autocomplete="email" required /></div>
+          <div class="field"><label for="loginPassword">Password</label><input id="loginPassword" name="password" type="password" autocomplete="current-password" required /></div>
+          <div class="form-actions"><button class="button button--solid" type="submit">Sign in</button><button class="text-button" type="button" id="forgotPassword">Forgot password?</button></div>
+        </form>
+        <p class="form-help" id="loginHelp">Admin access is controlled by the portfolio_admins table in Supabase.</p>
+      </div>
+    </section>
+  </div>
+
+  <aside class="admin-drawer" id="adminDrawer" aria-labelledby="adminTitle" aria-hidden="true">
+    <div class="admin-head">
+      <div class="admin-title-wrap"><span class="status-dot" aria-hidden="true"></span><h2 id="adminTitle">Studio</h2></div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="button button--small" id="signOutButton" type="button">Sign out</button>
+        <button class="icon-button" id="closeAdmin" type="button" aria-label="Close studio">×</button>
+      </div>
+    </div>
+    <div class="admin-content" id="adminContent"></div>
+  </aside>
+
+  <div class="toast-region" id="toastRegion" aria-live="polite" aria-atomic="true"></div>
+
+  <noscript><div style="padding:20px;font-family:system-ui;background:#fff4de;color:#24140e">This portfolio needs JavaScript to load projects from Supabase.</div></noscript>
+
+  <script>
+    /* Configuration constants are declared in the document head above. */
+
+    /*
+      SUPABASE DATA CONTRACT — paste this once into Supabase SQL Editor.
+      1) Create an Auth email/password user in Authentication > Users.
+      2) Replace admin@example.com below with that user’s email and run the
+         last INSERT after creating the user.
+      3) This app stores images/video in the public `portfolio-media` bucket.
+
+      create extension if not exists pgcrypto;
+
+      create table if not exists public.portfolio_admins (
+        user_id uuid primary key references auth.users(id) on delete cascade,
+        created_at timestamptz not null default now()
+      );
+
+      create or replace function public.is_portfolio_admin()
+      returns boolean language sql stable security definer set search_path = public
+      as $$ select exists (select 1 from public.portfolio_admins where user_id = auth.uid()) $$;
+
+      create table if not exists public.portfolio_settings (
+        id text primary key default 'main' check (id = 'main'),
+        name text not null default 'Film / Video',
+        role text not null default 'Director · Editor · Storyteller',
+        location text not null default 'Seoul, South Korea',
+        email text not null default 'hello@example.com',
+        focus text not null default 'Directing · Editing · Cinematography',
+        availability text not null default 'Freelance / Collaborations',
+        hero_title text not null default 'Frames that<br><em>stay</em> with you.',
+        hero_description text not null default 'A film and video portfolio for short films, moving-image experiments, and considered visual narratives.',
+        hero_media_path text,
+        showreel_url text,
+        about_text text not null default 'I make moving images that are <strong>precise, tactile,</strong> and open to interpretation.',
+        statement_title text not null default 'I look for the <em>human</em> detail inside every frame.',
+        statement_copy text not null default 'From first treatment to final grade, I build images with a clear emotional point of view—where rhythm, texture, and performance make the idea felt.',
+        work_intro text not null default 'A selection of film, commercial, music video, and experimental moving-image work.',
+        updated_at timestamptz not null default now()
+      );
+
+      insert into public.portfolio_settings (id) values ('main') on conflict (id) do nothing;
+
+      create table if not exists public.portfolio_projects (
+        id uuid primary key default gen_random_uuid(),
+        title text not null,
+        slug text unique,
+        category text not null default 'Film',
+        year text,
+        description text,
+        credit text,
+        video_url text,
+        cover_path text,
+        gallery_paths jsonb not null default '[]'::jsonb,
+        featured boolean not null default false,
+        published boolean not null default true,
+        display_order integer not null default 0,
+        created_at timestamptz not null default now(),
+        updated_at timestamptz not null default now()
+      );
+
+      create or replace function public.set_updated_at()
+      returns trigger language plpgsql as $$ begin new.updated_at = now(); return new; end; $$;
+      drop trigger if exists portfolio_settings_updated_at on public.portfolio_settings;
+      create trigger portfolio_settings_updated_at before update on public.portfolio_settings for each row execute function public.set_updated_at();
+      drop trigger if exists portfolio_projects_updated_at on public.portfolio_projects;
+      create trigger portfolio_projects_updated_at before update on public.portfolio_projects for each row execute function public.set_updated_at();
+
+      alter table public.portfolio_admins enable row level security;
+      alter table public.portfolio_settings enable row level security;
+      alter table public.portfolio_projects enable row level security;
+
+      drop policy if exists "Admins can read their own mapping" on public.portfolio_admins;
+      create policy "Admins can read their own mapping" on public.portfolio_admins for select using (user_id = auth.uid());
+
+      drop policy if exists "Public can view portfolio settings" on public.portfolio_settings;
+      create policy "Public can view portfolio settings" on public.portfolio_settings for select using (true);
+      drop policy if exists "Admins can update portfolio settings" on public.portfolio_settings;
+      create policy "Admins can update portfolio settings" on public.portfolio_settings for update using (public.is_portfolio_admin()) with check (public.is_portfolio_admin());
+
+      drop policy if exists "Public can view published projects" on public.portfolio_projects;
+      create policy "Public can view published projects" on public.portfolio_projects for select using (published or public.is_portfolio_admin());
+      drop policy if exists "Admins can insert projects" on public.portfolio_projects;
+      create policy "Admins can insert projects" on public.portfolio_projects for insert with check (public.is_portfolio_admin());
+      drop policy if exists "Admins can update projects" on public.portfolio_projects;
+      create policy "Admins can update projects" on public.portfolio_projects for update using (public.is_portfolio_admin()) with check (public.is_portfolio_admin());
+      drop policy if exists "Admins can delete projects" on public.portfolio_projects;
+      create policy "Admins can delete projects" on public.portfolio_projects for delete using (public.is_portfolio_admin());
+
+      insert into storage.buckets (id, name, public) values ('portfolio-media', 'portfolio-media', true)
+      on conflict (id) do update set public = true;
+
+      drop policy if exists "Public can view portfolio media" on storage.objects;
+      create policy "Public can view portfolio media" on storage.objects for select using (bucket_id = 'portfolio-media');
+      drop policy if exists "Admins can upload portfolio media" on storage.objects;
+      create policy "Admins can upload portfolio media" on storage.objects for insert with check (bucket_id = 'portfolio-media' and public.is_portfolio_admin());
+      drop policy if exists "Admins can update portfolio media" on storage.objects;
+      create policy "Admins can update portfolio media" on storage.objects for update using (bucket_id = 'portfolio-media' and public.is_portfolio_admin()) with check (bucket_id = 'portfolio-media' and public.is_portfolio_admin());
+      drop policy if exists "Admins can delete portfolio media" on storage.objects;
+      create policy "Admins can delete portfolio media" on storage.objects for delete using (bucket_id = 'portfolio-media' and public.is_portfolio_admin());
+
+      insert into public.portfolio_admins (user_id)
+      select id from auth.users where email = 'admin@example.com'
+      on conflict (user_id) do nothing;
+    */
+
+    (() => {
+      'use strict';
+
+      const $ = (selector, parent = document) => parent.querySelector(selector);
+      const $$ = (selector, parent = document) => Array.from(parent.querySelectorAll(selector));
+      const escapeHtml = (value = '') => String(value)
+        .replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;').replaceAll("'", '&#039;');
+      const escapeAttr = escapeHtml;
+
+      function extractFirstUrl(value) {
+        const match = String(value || '').match(/https?:\/\/[^\s\]\)]+/i);
+        return match ? match[0] : '#';
+      }
+      function normalizeProjectUrl(value) {
+        if (!value) return '';
+        const raw = String(value).trim();
+        if (/^https?:\/\//i.test(raw)) return raw;
+        return raw.replace(/^\/+/, '');
+      }
+      function toSafeText(value, fallback = '') {
+        return typeof value === 'string' && value.trim() ? value.trim() : fallback;
+      }
+      function safeRichText(value, fallback = '') {
+        // Permit only exact <br>, <em>, and <strong> tags; escape every other character.
+        return escapeHtml(toSafeText(value, fallback))
+          .replace(/&lt;br\s*\/?&gt;/gi, '<br>')
+          .replace(/&lt;(\/?)em&gt;/gi, '<$1em>')
+          .replace(/&lt;(\/?)strong&gt;/gi, '<$1strong>')
+          .replace(/\n/g, '<br>');
+      }
+      function isVideoPath(value = '') { return /\.(mp4|webm|mov)(\?.*)?$/i.test(value); }
+      function isYouTubeUrl(value = '') { return /(?:youtube\.com|youtu\.be)/i.test(value); }
+      function youtubeEmbedUrl(value = '') {
+        try {
+          const url = new URL(value);
+          let id = '';
+          if (url.hostname.includes('youtu.be')) id = url.pathname.split('/').filter(Boolean)[0] || '';
+          else if (url.pathname.includes('/shorts/')) id = url.pathname.split('/shorts/')[1]?.split('/')[0] || '';
+          else id = url.searchParams.get('v') || '';
+          return id ? `https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}?rel=0&modestbranding=1` : '';
+        } catch { return ''; }
+      }
+      function slugify(value = '') {
+        return String(value).toLowerCase().trim()
+          .replace(/[^a-z0-9가-힣]+/g, '-')
+          .replace(/(^-|-$)/g, '')
+          .slice(0, 100);
+      }
+      function randomId() { return Math.random().toString(36).slice(2, 10); }
+      function formattedYear() { return new Date().getFullYear(); }
+
+      // Normalize the supplied REST endpoint to the project URL that supabase-js expects.
+      const SUPABASE_PROJECT_URL = VITE_SUPABASE_URL.trim().replace(/\/rest\/v1\/?$/i, '');
+      const SOCIAL_URLS = {
+        youtube: extractFirstUrl(VITE_YOUTUBE_CHANNEL_URL),
+        instagram: extractFirstUrl(VITE_INSTAGRAM_URL),
+        threads: extractFirstUrl(VITE_THREADS_URL)
+      };
+
+      const defaultSettings = {
+        id: 'main',
+        name: 'Film / Video',
+        role: 'Director · Editor · Storyteller',
+        location: 'Seoul, South Korea',
+        email: 'hello@example.com',
+        focus: 'Directing · Editing · Cinematography',
+        availability: 'Freelance / Collaborations',
+        hero_title: 'Frames that<br><em>stay</em> with you.',
+        hero_description: 'A film and video portfolio for short films, moving-image experiments, and considered visual narratives.',
+        hero_media_path: '',
+        showreel_url: '',
+        about_text: 'I make moving images that are <strong>precise, tactile,</strong> and open to interpretation.',
+        statement_title: 'I look for the <em>human</em> detail inside every frame.',
+        statement_copy: 'From first treatment to final grade, I build images with a clear emotional point of view—where rhythm, texture, and performance make the idea felt.',
+        work_intro: 'A selection of film, commercial, music video, and experimental moving-image work.'
+      };
+
+      const state = {
+        client: null,
+        settings: { ...defaultSettings },
+        projects: [],
+        activeFilter: 'All',
+        session: null,
+        isAdmin: false,
+        backendError: '',
+        focusedBeforeModal: null
+      };
+
+      const sqlSetup = `create extension if not exists pgcrypto;
+
+create table if not exists public.portfolio_admins (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  created_at timestamptz not null default now()
+);
+
+create or replace function public.is_portfolio_admin()
+returns boolean language sql stable security definer set search_path = public
+as $$ select exists (select 1 from public.portfolio_admins where user_id = auth.uid()) $$;
+
+create table if not exists public.portfolio_settings (
+  id text primary key default 'main' check (id = 'main'),
+  name text not null default 'Film / Video',
+  role text not null default 'Director · Editor · Storyteller',
+  location text not null default 'Seoul, South Korea',
+  email text not null default 'hello@example.com',
+  focus text not null default 'Directing · Editing · Cinematography',
+  availability text not null default 'Freelance / Collaborations',
+  hero_title text not null default 'Frames that<br><em>stay</em> with you.',
+  hero_description text not null default 'A film and video portfolio for short films, moving-image experiments, and considered visual narratives.',
+  hero_media_path text,
+  showreel_url text,
+  about_text text not null default 'I make moving images that are <strong>precise, tactile,</strong> and open to interpretation.',
+  statement_title text not null default 'I look for the <em>human</em> detail inside every frame.',
+  statement_copy text not null default 'From first treatment to final grade, I build images with a clear emotional point of view—where rhythm, texture, and performance make the idea felt.',
+  work_intro text not null default 'A selection of film, commercial, music video, and experimental moving-image work.',
+  updated_at timestamptz not null default now()
+);
+insert into public.portfolio_settings (id) values ('main') on conflict (id) do nothing;
+
+create table if not exists public.portfolio_projects (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  slug text unique,
+  category text not null default 'Film',
+  year text,
+  description text,
+  credit text,
+  video_url text,
+  cover_path text,
+  gallery_paths jsonb not null default '[]'::jsonb,
+  featured boolean not null default false,
+  published boolean not null default true,
+  display_order integer not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create or replace function public.set_updated_at()
+returns trigger language plpgsql as $$ begin new.updated_at = now(); return new; end; $$;
+drop trigger if exists portfolio_settings_updated_at on public.portfolio_settings;
+create trigger portfolio_settings_updated_at before update on public.portfolio_settings for each row execute function public.set_updated_at();
+drop trigger if exists portfolio_projects_updated_at on public.portfolio_projects;
+create trigger portfolio_projects_updated_at before update on public.portfolio_projects for each row execute function public.set_updated_at();
+
+alter table public.portfolio_admins enable row level security;
+alter table public.portfolio_settings enable row level security;
+alter table public.portfolio_projects enable row level security;
+
+drop policy if exists "Admins can read their own mapping" on public.portfolio_admins;
+create policy "Admins can read their own mapping" on public.portfolio_admins for select using (user_id = auth.uid());
+drop policy if exists "Public can view portfolio settings" on public.portfolio_settings;
+create policy "Public can view portfolio settings" on public.portfolio_settings for select using (true);
+drop policy if exists "Admins can update portfolio settings" on public.portfolio_settings;
+create policy "Admins can update portfolio settings" on public.portfolio_settings for update using (public.is_portfolio_admin()) with check (public.is_portfolio_admin());
+drop policy if exists "Public can view published projects" on public.portfolio_projects;
+create policy "Public can view published projects" on public.portfolio_projects for select using (published or public.is_portfolio_admin());
+drop policy if exists "Admins can insert projects" on public.portfolio_projects;
+create policy "Admins can insert projects" on public.portfolio_projects for insert with check (public.is_portfolio_admin());
+drop policy if exists "Admins can update projects" on public.portfolio_projects;
+create policy "Admins can update projects" on public.portfolio_projects for update using (public.is_portfolio_admin()) with check (public.is_portfolio_admin());
+drop policy if exists "Admins can delete projects" on public.portfolio_projects;
+create policy "Admins can delete projects" on public.portfolio_projects for delete using (public.is_portfolio_admin());
+
+insert into storage.buckets (id, name, public) values ('portfolio-media', 'portfolio-media', true)
+on conflict (id) do update set public = true;
+drop policy if exists "Public can view portfolio media" on storage.objects;
+create policy "Public can view portfolio media" on storage.objects for select using (bucket_id = 'portfolio-media');
+drop policy if exists "Admins can upload portfolio media" on storage.objects;
+create policy "Admins can upload portfolio media" on storage.objects for insert with check (bucket_id = 'portfolio-media' and public.is_portfolio_admin());
+drop policy if exists "Admins can update portfolio media" on storage.objects;
+create policy "Admins can update portfolio media" on storage.objects for update using (bucket_id = 'portfolio-media' and public.is_portfolio_admin()) with check (bucket_id = 'portfolio-media' and public.is_portfolio_admin());
+drop policy if exists "Admins can delete portfolio media" on storage.objects;
+create policy "Admins can delete portfolio media" on storage.objects for delete using (bucket_id = 'portfolio-media' and public.is_portfolio_admin());
+
+-- Replace admin@example.com AFTER creating an Auth email/password user.
+insert into public.portfolio_admins (user_id)
+select id from auth.users where email = 'admin@example.com'
+on conflict (user_id) do nothing;`;
+
+      function toast(message, type = '') {
+        const region = $('#toastRegion');
+        const node = document.createElement('div');
+        node.className = `toast ${type}`;
+        node.textContent = message;
+        region.append(node);
+        window.setTimeout(() => node.remove(), 4800);
+      }
+
+      function setSocialLink(id, url, fallbackLabel) {
+        const element = $(id);
+        const isReady = url && url !== '#';
+        element.href = isReady ? url : '#';
+        element.setAttribute('aria-disabled', isReady ? 'false' : 'true');
+        if (!isReady) {
+          element.addEventListener('click', (event) => {
+            event.preventDefault();
+            toast(`${fallbackLabel} link has not been set yet.`, 'error');
+          });
+        }
+      }
+
+      function ensureLogo() {
+        const logo = $('#logoImage');
+        const fallback = $('#brandFallback');
+        if (!VITE_LOGO_SRC || /^\.\/logo\.png$/i.test(VITE_LOGO_SRC)) return;
+        logo.src = VITE_LOGO_SRC;
+        logo.hidden = false;
+        logo.addEventListener('load', () => { fallback.hidden = true; });
+        logo.addEventListener('error', () => { logo.hidden = true; fallback.hidden = false; });
+      }
+
+      function mediaUrl(path) {
+        const normalized = normalizeProjectUrl(path);
+        if (!normalized) return '';
+        if (/^https?:\/\//i.test(normalized) || normalized.startsWith('data:')) return normalized;
+        if (!state.client) return '';
+        const { data } = state.client.storage.from(VITE_SUPABASE_STORAGE_BUCKET).getPublicUrl(normalized);
+        return data?.publicUrl || '';
+      }
+
+      function renderHeroMedia() {
+        const hero = $('#heroMedia');
+        const path = state.settings.hero_media_path || '';
+        const url = mediaUrl(path);
+        if (!url) {
+          hero.innerHTML = '<div class="hero-no-media"></div>';
+          return;
+        }
+        if (isVideoPath(url)) {
+          hero.innerHTML = `<video autoplay muted loop playsinline preload="metadata" poster=""><source src="${escapeAttr(url)}" /></video>`;
+        } else {
+          hero.innerHTML = `<img src="${escapeAttr(url)}" alt="" />`;
+        }
+      }
+
+      function applySettings() {
+        const s = state.settings;
+        document.title = `${toSafeText(s.name, defaultSettings.name)} — Film / Video`;
+        $('#brandName').textContent = toSafeText(s.name, defaultSettings.name);
+        $('#heroEyebrow').textContent = toSafeText(s.role, defaultSettings.role);
+        $('#heroMeta').textContent = `${toSafeText(s.location, defaultSettings.location)} · ${toSafeText(s.availability, defaultSettings.availability)}`;
+        $('#heroTitle').innerHTML = safeRichText(s.hero_title, defaultSettings.hero_title);
+        $('#heroDescription').textContent = toSafeText(s.hero_description, defaultSettings.hero_description);
+        $('#workIntroCopy').textContent = toSafeText(s.work_intro, defaultSettings.work_intro);
+        $('#statementTitle').innerHTML = safeRichText(s.statement_title, defaultSettings.statement_title);
+        $('#statementCopy').textContent = toSafeText(s.statement_copy, defaultSettings.statement_copy);
+        $('#aboutTitle').innerHTML = safeRichText(s.about_text, defaultSettings.about_text);
+        $('#factLocation').textContent = toSafeText(s.location, defaultSettings.location);
+        $('#factFocus').textContent = toSafeText(s.focus, defaultSettings.focus);
+        $('#factAvailability').textContent = toSafeText(s.availability, defaultSettings.availability);
+        $('#emailLink').href = `mailto:${encodeURIComponent(toSafeText(s.email, defaultSettings.email))}`;
+        $('#footerCopy').textContent = `© ${formattedYear()} ${toSafeText(s.name, defaultSettings.name)}`;
+        renderHeroMedia();
+        const showreelUrl = normalizeProjectUrl(s.showreel_url);
+        for (const element of [$('#showreelLink'), $('#aboutShowreelLink')]) {
+          if (showreelUrl) {
+            element.href = showreelUrl;
+            element.target = '_blank';
+            element.rel = 'noopener noreferrer';
+          } else {
+            element.href = '#work';
+            element.target = '';
+          }
+        }
+      }
+
+      function getProjectCover(project) {
+        return mediaUrl(project.cover_path || '');
+      }
+      function categoryColor(category) {
+        const choices = ['#dfb69d', '#b8c7c9', '#b8b0d2', '#d7c68f', '#b8c5a1', '#d2adbe'];
+        let hash = 0;
+        for (const char of String(category || '')) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+        return choices[hash % choices.length];
+      }
+      function projectCardMarkup(project, index) {
+        const cover = getProjectCover(project);
+        const category = toSafeText(project.category, 'Film');
+        const title = toSafeText(project.title, 'Untitled');
+        const year = toSafeText(project.year, '');
+        const heroContent = cover
+          ? (isVideoPath(cover)
+            ? `<video muted loop playsinline preload="metadata" aria-hidden="true"><source src="${escapeAttr(cover)}" /></video>`
+            : `<img src="${escapeAttr(cover)}" alt="${escapeAttr(title)} project still" loading="lazy" />`)
+          : `<span class="project-image-placeholder" style="--placeholder:${categoryColor(category)}">${escapeHtml(String(index + 1).padStart(2, '0'))}</span>`;
+        return `<article class="project-card" data-project-id="${escapeAttr(project.id)}" data-category="${escapeAttr(category)}">
+          <button class="project-card-button" type="button" data-open-project="${escapeAttr(project.id)}" aria-label="Open ${escapeAttr(title)}">
+            <div class="project-image-wrap">${heroContent}<div class="project-image-overlay"><span>View project</span><span class="round-arrow" aria-hidden="true">↗</span></div></div>
+            <div class="project-meta"><div><h3 class="project-title">${escapeHtml(title)}</h3></div><p class="project-detail">${escapeHtml(category)}${year ? `<br>${escapeHtml(year)}` : ''}</p></div>
+          </button>
+        </article>`;
+      }
+      function renderFilters() {
+        const categories = ['All', ...Array.from(new Set(state.projects.map((project) => toSafeText(project.category, 'Film')))).sort((a,b) => a.localeCompare(b))];
+        if (!categories.includes(state.activeFilter)) state.activeFilter = 'All';
+        $('#filterRow').innerHTML = categories.map((category) => `<button class="filter-button ${category === state.activeFilter ? 'is-active' : ''}" type="button" data-filter="${escapeAttr(category)}" aria-pressed="${category === state.activeFilter}">${escapeHtml(category)}</button>`).join('');
+      }
+      function renderProjects() {
+        renderFilters();
+        const visible = state.projects.filter((project) => state.activeFilter === 'All' || toSafeText(project.category, 'Film') === state.activeFilter);
+        const grid = $('#projectGrid');
+        if (!visible.length) {
+          const noData = state.projects.length === 0;
+          grid.innerHTML = `<div class="empty-state"><div><h3>${noData ? 'The reel is loading.' : 'No work in this category.'}</h3><p>${noData ? 'Selected work will appear here once it is published from the Studio editor.' : 'Choose another category to see more work.'}</p></div></div>`;
+          return;
+        }
+        grid.innerHTML = visible.map(projectCardMarkup).join('');
+        $$('.project-card video', grid).forEach((video) => {
+          const card = video.closest('.project-card');
+          card.addEventListener('pointerenter', () => video.play().catch(() => {}));
+          card.addEventListener('pointerleave', () => { video.pause(); video.currentTime = 0; });
+        });
+      }
+
+      function projectGalleryMarkup(paths) {
+        const gallery = Array.isArray(paths) ? paths : [];
+        if (!gallery.length) return '';
+        return `<div class="modal-gallery">${gallery.map((item) => {
+          const url = mediaUrl(item);
+          if (!url) return '';
+          return isVideoPath(url)
+            ? `<video controls preload="metadata"><source src="${escapeAttr(url)}" /></video>`
+            : `<img src="${escapeAttr(url)}" alt="Project still" loading="lazy" />`;
+        }).join('')}</div>`;
+      }
+      function openProject(id) {
+        const project = state.projects.find((entry) => String(entry.id) === String(id));
+        if (!project) return;
+        const title = toSafeText(project.title, 'Untitled');
+        const cover = getProjectCover(project);
+        const videoUrl = normalizeProjectUrl(project.video_url);
+        const embed = youtubeEmbedUrl(videoUrl);
+        let media = '';
+        if (embed) media = `<iframe src="${escapeAttr(embed)}" title="${escapeAttr(title)} video" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>`;
+        else if (cover && isVideoPath(cover)) media = `<video controls autoplay muted playsinline><source src="${escapeAttr(cover)}" /></video>`;
+        else if (cover) media = `<img src="${escapeAttr(cover)}" alt="${escapeAttr(title)} project still" />`;
+        else media = `<div class="project-image-placeholder" style="--placeholder:${categoryColor(project.category)}">${escapeHtml(title.slice(0,2).toUpperCase())}</div>`;
+
+        const category = toSafeText(project.category, 'Film');
+        const info = [category, project.year].filter(Boolean).join(' · ');
+        const credit = toSafeText(project.credit, '—');
+        const description = toSafeText(project.description, 'Project details coming soon.');
+        const external = videoUrl && !embed ? `<a class="button" href="${escapeAttr(videoUrl)}" target="_blank" rel="noopener noreferrer">Watch full video <span aria-hidden="true">↗</span></a>` : '';
+        $('#projectModalContent').innerHTML = `<div class="project-modal-media">${media}</div>
+          <div class="project-modal-head"><div><p class="eyebrow">${escapeHtml(category)}</p><h2 class="project-modal-title" id="projectModalTitle">${escapeHtml(title)}</h2></div><div class="project-modal-info"><p>${escapeHtml(info)}</p>${external}</div></div>
+          <div class="project-modal-copy"><p class="project-modal-description">${escapeHtml(description)}</p><dl class="project-modal-credits"><div class="fact"><dt>Credits</dt><dd>${escapeHtml(credit)}</dd></div><div class="fact"><dt>Format</dt><dd>${escapeHtml(category)}</dd></div></dl></div>
+          ${projectGalleryMarkup(project.gallery_paths)}`;
+        state.focusedBeforeModal = document.activeElement;
+        const layer = $('#projectModalLayer');
+        layer.classList.add('is-open');
+        layer.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('modal-open');
+        window.setTimeout(() => $('[data-close-modal]', layer).focus(), 0);
+      }
+      function closeProjectModal() {
+        const layer = $('#projectModalLayer');
+        if (!layer.classList.contains('is-open')) return;
+        $$('#projectModal video, #projectModal iframe').forEach((element) => { if (typeof element.pause === 'function') element.pause(); });
+        layer.classList.remove('is-open');
+        layer.setAttribute('aria-hidden', 'true');
+        document.body.classList.remove('modal-open');
+        state.focusedBeforeModal?.focus?.();
+      }
+
+      async function initializeClient() {
+        if (!window.supabase?.createClient) {
+          state.backendError = 'Supabase library could not load. Check your network or CDN policy.';
+          return;
+        }
+        if (!/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(SUPABASE_PROJECT_URL)) {
+          state.backendError = 'The supplied Supabase project URL is not valid.';
+          return;
+        }
+        state.client = window.supabase.createClient(SUPABASE_PROJECT_URL, VITE_SUPABASE_PUBLISHABLE_KEY, {
+          auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+        });
+        const { data: { session } } = await state.client.auth.getSession();
+        state.session = session;
+        if (session) await checkAdmin();
+        state.client.auth.onAuthStateChange(async (_event, sessionState) => {
+          state.session = sessionState;
+          state.isAdmin = false;
+          if (sessionState) await checkAdmin();
+          updateAdminTrigger();
+          if (!sessionState) closeAdmin();
+        });
+      }
+
+      async function checkAdmin() {
+        if (!state.client || !state.session?.user) return false;
+        const { data, error } = await state.client.from('portfolio_admins').select('user_id').eq('user_id', state.session.user.id).maybeSingle();
+        state.isAdmin = Boolean(data && !error);
+        return state.isAdmin;
+      }
+      function updateAdminTrigger() {
+        $('#adminTrigger').textContent = state.session && state.isAdmin ? 'Studio' : 'Studio';
+      }
+      async function loadPublicData({ includeUnpublished = false } = {}) {
+        if (!state.client) return;
+        const [settingsResult, projectsResult] = await Promise.all([
+          state.client.from('portfolio_settings').select('*').eq('id', 'main').maybeSingle(),
+          state.client.from('portfolio_projects').select('*').order('featured', { ascending: false }).order('display_order', { ascending: true }).order('created_at', { ascending: false })
+        ]);
+        if (settingsResult.error && !settingsResult.error.code?.includes('PGRST116')) {
+          state.backendError = settingsResult.error.message;
+        }
+        if (settingsResult.data) state.settings = { ...defaultSettings, ...settingsResult.data };
+        if (projectsResult.error) {
+          state.backendError = projectsResult.error.message;
+          state.projects = [];
+        } else {
+          state.projects = (projectsResult.data || []).filter((project) => includeUnpublished || project.published !== false);
+        }
+        applySettings();
+        renderProjects();
+      }
+
+      function openAuth() {
+        state.focusedBeforeModal = document.activeElement;
+        const layer = $('#authModalLayer');
+        layer.classList.add('is-open');
+        layer.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('modal-open');
+        window.setTimeout(() => $('#loginEmail').focus(), 0);
+      }
+      function closeAuth() {
+        const layer = $('#authModalLayer');
+        layer.classList.remove('is-open');
+        layer.setAttribute('aria-hidden', 'true');
+        document.body.classList.remove('modal-open');
+        state.focusedBeforeModal?.focus?.();
+      }
+
+      function setupAdminMarkup() {
+        const content = $('#adminContent');
+        if (!state.client || state.backendError) {
+          content.innerHTML = `<section class="admin-section"><h3>Database setup required</h3><p>The public page is running with a local fallback because Supabase could not return the portfolio tables.</p><div class="admin-notice"><strong>Details:</strong> ${escapeHtml(state.backendError || 'Supabase client is unavailable.')}</div><div class="code-panel"><button class="button button--small copy-code" type="button" data-copy-sql>Copy SQL</button><pre>${escapeHtml(sqlSetup)}</pre></div></section>`;
+          return;
+        }
+        if (!state.isAdmin) {
+          content.innerHTML = `<section class="admin-section"><h3>Access not approved</h3><p>You are signed in as <strong>${escapeHtml(state.session?.user?.email || '')}</strong>, but this account is not in <code>portfolio_admins</code>.</p><div class="admin-notice">Run the final <strong>INSERT</strong> in the setup SQL after creating the Auth user, then sign out and sign back in.</div><div class="code-panel"><button class="button button--small copy-code" type="button" data-copy-sql>Copy SQL</button><pre>${escapeHtml(sqlSetup)}</pre></div></section>`;
+          return;
+        }
+        content.innerHTML = `${settingsEditorMarkup()}${projectEditorMarkup()}`;
+        bindAdminFormEvents();
+      }
+
+      function settingsEditorMarkup() {
+        const s = state.settings;
+        return `<section class="admin-section"><h3>Portfolio details</h3><p>These fields update the live site as soon as you save.</p>
+          <form class="form-grid" id="settingsForm">
+            <div class="field-row"><div class="field"><label for="settingName">Portfolio / name</label><input id="settingName" name="name" value="${escapeAttr(s.name)}" required /></div><div class="field"><label for="settingRole">Role line</label><input id="settingRole" name="role" value="${escapeAttr(s.role)}" required /></div></div>
+            <div class="field-row"><div class="field"><label for="settingLocation">Location</label><input id="settingLocation" name="location" value="${escapeAttr(s.location)}" /></div><div class="field"><label for="settingEmail">Contact email</label><input id="settingEmail" name="email" type="email" value="${escapeAttr(s.email)}" required /></div></div>
+            <div class="field-row"><div class="field"><label for="settingFocus">Focus</label><input id="settingFocus" name="focus" value="${escapeAttr(s.focus)}" /></div><div class="field"><label for="settingAvailability">Availability</label><input id="settingAvailability" name="availability" value="${escapeAttr(s.availability)}" /></div></div>
+            <div class="field"><label for="settingHeroTitle">Hero title</label><input id="settingHeroTitle" name="hero_title" value="${escapeAttr(s.hero_title)}" /><p class="form-help">Use &lt;br&gt;, &lt;em&gt;, or &lt;strong&gt; for deliberate emphasis.</p></div>
+            <div class="field"><label for="settingHeroDescription">Hero description</label><textarea id="settingHeroDescription" name="hero_description">${escapeHtml(s.hero_description)}</textarea></div>
+            <div class="field"><label for="settingHeroMediaPath">Hero image/video path or public URL</label><input id="settingHeroMediaPath" name="hero_media_path" value="${escapeAttr(s.hero_media_path || '')}" placeholder="hero/your-file.jpg" /></div>
+            <div class="upload-zone"><strong style="font-size:11px">Upload hero media</strong><input id="heroUpload" type="file" accept="image/*,video/mp4,video/webm,video/quicktime" /><p class="upload-status" id="heroUploadStatus">Uploading writes the Storage path above. Video is not optimized automatically.</p></div>
+            <div class="field"><label for="settingShowreel">Showreel URL</label><input id="settingShowreel" name="showreel_url" type="url" value="${escapeAttr(s.showreel_url || '')}" placeholder="https://youtu.be/..." /></div>
+            <div class="field"><label for="settingWorkIntro">Work intro</label><textarea id="settingWorkIntro" name="work_intro">${escapeHtml(s.work_intro)}</textarea></div>
+            <div class="field"><label for="settingStatementTitle">Approach headline</label><textarea id="settingStatementTitle" name="statement_title">${escapeHtml(s.statement_title)}</textarea></div>
+            <div class="field"><label for="settingStatementCopy">Approach copy</label><textarea id="settingStatementCopy" name="statement_copy">${escapeHtml(s.statement_copy)}</textarea></div>
+            <div class="field"><label for="settingAboutText">About headline</label><textarea id="settingAboutText" name="about_text">${escapeHtml(s.about_text)}</textarea></div>
+            <div class="form-actions"><button class="button button--solid" type="submit">Save portfolio details</button></div>
+          </form>
+        </section>`;
+      }
+
+      function projectEditorMarkup() {
+        const rows = state.projects.map((project) => {
+          const cover = getProjectCover(project);
+          return `<div class="admin-project-row"><img class="admin-project-thumb" src="${escapeAttr(cover || '')}" alt="" ${cover ? '' : 'style="visibility:hidden"'} /><div class="admin-project-name"><strong>${escapeHtml(project.title)}</strong><span>${escapeHtml(project.category || 'Film')} · ${escapeHtml(project.year || '')} ${project.published === false ? '· Draft' : ''}</span></div><button class="icon-button" type="button" title="Edit project" aria-label="Edit ${escapeAttr(project.title)}" data-edit-project="${escapeAttr(project.id)}">✎</button></div>`;
+        }).join('') || '<p class="form-help">No projects yet. Add the first selected work below.</p>';
+        return `<section class="admin-section"><h3>Projects</h3><p>Add, edit, publish, or reorder portfolio pieces. Display order uses lower numbers first.</p>
+          <button class="button" id="newProjectButton" type="button">Add project <span aria-hidden="true">+</span></button>
+          <div class="admin-project-form" id="projectFormWrap"></div>
+          <div class="admin-project-list">${rows}</div>
+        </section>`;
+      }
+
+      function projectFormMarkup(project = {}) {
+        const p = {
+          id: '', title: '', category: 'Film', year: String(formattedYear()), description: '', credit: '', video_url: '', cover_path: '', gallery_paths: [], featured: false, published: true, display_order: 0,
+          ...project
+        };
+        const galleryPaths = Array.isArray(p.gallery_paths) ? p.gallery_paths : [];
+        return `<form class="form-grid" id="projectForm" data-project-id="${escapeAttr(p.id || '')}">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><strong style="font-size:12px;letter-spacing:.08em;text-transform:uppercase">${p.id ? 'Edit project' : 'New project'}</strong><button type="button" class="text-button" id="cancelProjectEdit">Cancel</button></div>
+          <div class="field"><label for="projectTitle">Title</label><input id="projectTitle" name="title" value="${escapeAttr(p.title)}" required /></div>
+          <div class="field-row"><div class="field"><label for="projectCategory">Category</label><input id="projectCategory" name="category" value="${escapeAttr(p.category)}" placeholder="Film, Music Video, Commercial…" required /></div><div class="field"><label for="projectYear">Year</label><input id="projectYear" name="year" value="${escapeAttr(p.year || '')}" /></div></div>
+          <div class="field"><label for="projectDescription">Description</label><textarea id="projectDescription" name="description">${escapeHtml(p.description || '')}</textarea></div>
+          <div class="field"><label for="projectCredit">Credits</label><input id="projectCredit" name="credit" value="${escapeAttr(p.credit || '')}" placeholder="Director · Editor · Camera" /></div>
+          <div class="field"><label for="projectVideoUrl">Video URL</label><input id="projectVideoUrl" name="video_url" type="url" value="${escapeAttr(p.video_url || '')}" placeholder="YouTube, Vimeo, or direct video URL" /></div>
+          <div class="field"><label for="projectCoverPath">Cover path or public URL</label><input id="projectCoverPath" name="cover_path" value="${escapeAttr(p.cover_path || '')}" placeholder="projects/cover.jpg" /></div>
+          <div class="upload-zone"><strong style="font-size:11px">Upload cover image/video</strong><input id="projectCoverUpload" type="file" accept="image/*,video/mp4,video/webm,video/quicktime" /><p class="upload-status" id="projectCoverStatus">Uploaded path will be written above.</p></div>
+          <div class="field"><label for="projectGalleryPaths">Gallery paths / URLs</label><textarea id="projectGalleryPaths" name="gallery_paths" placeholder="One Storage path or public URL per line">${escapeHtml(galleryPaths.join('\n'))}</textarea></div>
+          <div class="upload-zone"><strong style="font-size:11px">Add gallery media</strong><input id="projectGalleryUpload" type="file" multiple accept="image/*,video/mp4,video/webm,video/quicktime" /><p class="upload-status" id="projectGalleryStatus">Uploads append paths to the gallery field.</p></div>
+          <div class="field-row"><label class="check-field"><input type="checkbox" name="featured" ${p.featured ? 'checked' : ''} /> Feature first</label><label class="check-field"><input type="checkbox" name="published" ${p.published !== false ? 'checked' : ''} /> Published</label></div>
+          <div class="field"><label for="projectOrder">Display order</label><input id="projectOrder" name="display_order" type="number" value="${escapeAttr(p.display_order)}" /></div>
+          <div class="form-actions"><button class="button button--solid" type="submit">${p.id ? 'Save project' : 'Publish project'}</button>${p.id ? '<button class="text-button" type="button" id="deleteProject">Delete project</button>' : ''}</div>
+        </form>`;
+      }
+
+      async function uploadFile(file, folder = 'uploads') {
+        if (!state.client) throw new Error('Supabase is not available.');
+        if (!file) throw new Error('Select a file first.');
+        if (file.size > 90 * 1024 * 1024) throw new Error('Please keep individual uploads below 90 MB for reliable browser uploads.');
+        const originalName = file.name.replace(/[^a-zA-Z0-9._-]/g, '-').toLowerCase();
+        const filePath = `${folder}/${Date.now()}-${randomId()}-${originalName}`;
+        const { error } = await state.client.storage.from(VITE_SUPABASE_STORAGE_BUCKET).upload(filePath, file, { cacheControl: '3600', upsert: false, contentType: file.type || undefined });
+        if (error) throw error;
+        return filePath;
+      }
+
+      function bindAdminFormEvents() {
+        $('#settingsForm')?.addEventListener('submit', saveSettings);
+        $('#heroUpload')?.addEventListener('change', handleHeroUpload);
+        $('#newProjectButton')?.addEventListener('click', () => openProjectForm());
+        $$('[data-edit-project]').forEach((button) => button.addEventListener('click', () => {
+          openProjectForm(state.projects.find((project) => String(project.id) === button.dataset.editProject));
+        }));
+      }
+      function openProjectForm(project) {
+        const wrap = $('#projectFormWrap');
+        wrap.innerHTML = projectFormMarkup(project);
+        wrap.classList.add('is-open');
+        $('#projectTitle', wrap).focus();
+        $('#cancelProjectEdit', wrap)?.addEventListener('click', () => { wrap.classList.remove('is-open'); wrap.innerHTML = ''; });
+        $('#projectForm', wrap)?.addEventListener('submit', saveProject);
+        $('#projectCoverUpload', wrap)?.addEventListener('change', handleProjectCoverUpload);
+        $('#projectGalleryUpload', wrap)?.addEventListener('change', handleProjectGalleryUpload);
+        $('#deleteProject', wrap)?.addEventListener('click', deleteProject);
+      }
+      async function handleHeroUpload(event) {
+        const status = $('#heroUploadStatus');
+        const file = event.target.files?.[0];
+        if (!file) return;
+        try {
+          status.textContent = 'Uploading…';
+          const path = await uploadFile(file, 'hero');
+          $('#settingHeroMediaPath').value = path;
+          status.textContent = `Uploaded: ${path}`;
+          toast('Hero media uploaded. Save portfolio details to publish it.', 'success');
+        } catch (error) { status.textContent = error.message; toast(error.message, 'error'); }
+      }
+      async function handleProjectCoverUpload(event) {
+        const status = $('#projectCoverStatus');
+        const file = event.target.files?.[0];
+        if (!file) return;
+        try {
+          status.textContent = 'Uploading…';
+          const path = await uploadFile(file, 'projects');
+          $('#projectCoverPath').value = path;
+          status.textContent = `Uploaded: ${path}`;
+          toast('Cover media uploaded. Save the project to use it.', 'success');
+        } catch (error) { status.textContent = error.message; toast(error.message, 'error'); }
+      }
+      async function handleProjectGalleryUpload(event) {
+        const status = $('#projectGalleryStatus');
+        const files = Array.from(event.target.files || []);
+        if (!files.length) return;
+        try {
+          status.textContent = `Uploading 0 / ${files.length}…`;
+          const paths = [];
+          for (let index = 0; index < files.length; index += 1) {
+            paths.push(await uploadFile(files[index], 'projects/gallery'));
+            status.textContent = `Uploading ${index + 1} / ${files.length}…`;
+          }
+          const field = $('#projectGalleryPaths');
+          const existing = field.value.trim();
+          field.value = [existing, ...paths].filter(Boolean).join(existing ? '\n' : '');
+          status.textContent = `${paths.length} file(s) uploaded. Save the project to use them.`;
+          toast(`${paths.length} gallery file(s) uploaded.`, 'success');
+        } catch (error) { status.textContent = error.message; toast(error.message, 'error'); }
+      }
+      async function saveSettings(event) {
+        event.preventDefault();
+        if (!state.isAdmin) return toast('Admin approval is required.', 'error');
+        const form = new FormData(event.currentTarget);
+        const payload = {
+          id: 'main',
+          name: form.get('name')?.trim(), role: form.get('role')?.trim(), location: form.get('location')?.trim(), email: form.get('email')?.trim(),
+          focus: form.get('focus')?.trim(), availability: form.get('availability')?.trim(), hero_title: form.get('hero_title')?.trim(),
+          hero_description: form.get('hero_description')?.trim(), hero_media_path: form.get('hero_media_path')?.trim() || null,
+          showreel_url: form.get('showreel_url')?.trim() || null, work_intro: form.get('work_intro')?.trim(),
+          statement_title: form.get('statement_title')?.trim(), statement_copy: form.get('statement_copy')?.trim(), about_text: form.get('about_text')?.trim()
+        };
+        const submit = $('button[type="submit"]', event.currentTarget);
+        submit.disabled = true; submit.textContent = 'Saving…';
+        const { error } = await state.client.from('portfolio_settings').upsert(payload, { onConflict: 'id' });
+        submit.disabled = false; submit.textContent = 'Save portfolio details';
+        if (error) return toast(error.message, 'error');
+        state.settings = { ...state.settings, ...payload };
+        applySettings();
+        toast('Portfolio details saved.', 'success');
+      }
+      async function saveProject(event) {
+        event.preventDefault();
+        if (!state.isAdmin) return toast('Admin approval is required.', 'error');
+        const form = event.currentTarget;
+        const values = new FormData(form);
+        const id = form.dataset.projectId;
+        const title = values.get('title')?.trim();
+        const galleryPaths = String(values.get('gallery_paths') || '').split(/\n+/).map((item) => item.trim()).filter(Boolean);
+        const payload = {
+          title,
+          slug: slugify(title),
+          category: values.get('category')?.trim() || 'Film',
+          year: values.get('year')?.trim() || null,
+          description: values.get('description')?.trim() || null,
+          credit: values.get('credit')?.trim() || null,
+          video_url: values.get('video_url')?.trim() || null,
+          cover_path: values.get('cover_path')?.trim() || null,
+          gallery_paths: galleryPaths,
+          featured: values.get('featured') === 'on',
+          published: values.get('published') === 'on',
+          display_order: Number(values.get('display_order') || 0)
+        };
+        const submit = $('button[type="submit"]', form);
+        submit.disabled = true; submit.textContent = 'Saving…';
+        let result;
+        if (id) result = await state.client.from('portfolio_projects').update(payload).eq('id', id).select().single();
+        else result = await state.client.from('portfolio_projects').insert(payload).select().single();
+        submit.disabled = false; submit.textContent = id ? 'Save project' : 'Publish project';
+        if (result.error) {
+          if (result.error.code === '23505') toast('A project with that title/slug already exists. Change the title slightly.', 'error');
+          else toast(result.error.message, 'error');
+          return;
+        }
+        await loadPublicData({ includeUnpublished: true });
+        setupAdminMarkup();
+        toast(`Project ${id ? 'updated' : 'created'}.`, 'success');
+      }
+      async function deleteProject() {
+        const form = $('#projectForm');
+        const id = form?.dataset.projectId;
+        if (!id || !window.confirm('Delete this project record? Uploaded media files will remain in Storage.')) return;
+        const { error } = await state.client.from('portfolio_projects').delete().eq('id', id);
+        if (error) return toast(error.message, 'error');
+        await loadPublicData({ includeUnpublished: true });
+        setupAdminMarkup();
+        toast('Project deleted.', 'success');
+      }
+
+      async function openAdmin() {
+        if (!state.session) return openAuth();
+        await checkAdmin();
+        if (state.isAdmin) await loadPublicData({ includeUnpublished: true });
+        setupAdminMarkup();
+        const drawer = $('#adminDrawer');
+        drawer.classList.add('is-open');
+        drawer.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('modal-open');
+        window.setTimeout(() => $('#closeAdmin').focus(), 0);
+      }
+      function closeAdmin() {
+        const drawer = $('#adminDrawer');
+        drawer.classList.remove('is-open');
+        drawer.setAttribute('aria-hidden', 'true');
+        if (!$('#projectModalLayer').classList.contains('is-open') && !$('#authModalLayer').classList.contains('is-open')) document.body.classList.remove('modal-open');
+      }
+
+      async function signIn(event) {
+        event.preventDefault();
+        if (!state.client) return toast('Supabase is not available. Run the setup first.', 'error');
+        const form = new FormData(event.currentTarget);
+        const submit = $('button[type="submit"]', event.currentTarget);
+        submit.disabled = true; submit.textContent = 'Signing in…';
+        const { data, error } = await state.client.auth.signInWithPassword({ email: form.get('email'), password: form.get('password') });
+        submit.disabled = false; submit.textContent = 'Sign in';
+        if (error) return toast(error.message, 'error');
+        state.session = data.session;
+        await checkAdmin();
+        closeAuth();
+        if (state.isAdmin) {
+          toast('Signed in to Studio.', 'success');
+          openAdmin();
+        } else {
+          toast('Signed in, but this account has not been approved as an admin.', 'error');
+          openAdmin();
+        }
+      }
+      async function resetPassword() {
+        const email = $('#loginEmail').value.trim();
+        if (!email) return toast('Enter your email address first.', 'error');
+        const { error } = await state.client.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}${window.location.pathname}` });
+        if (error) toast(error.message, 'error');
+        else toast('Password-reset email sent. Check your inbox.', 'success');
+      }
+
+      function bindEvents() {
+        window.addEventListener('scroll', () => $('#siteHeader').classList.toggle('is-scrolled', window.scrollY > 10), { passive: true });
+        $('#menuTrigger').addEventListener('click', () => {
+          const nav = $('#primaryNav');
+          const isOpen = nav.classList.toggle('is-open');
+          $('#menuTrigger').setAttribute('aria-expanded', String(isOpen));
+        });
+        $$('#primaryNav a').forEach((link) => link.addEventListener('click', () => {
+          $('#primaryNav').classList.remove('is-open'); $('#menuTrigger').setAttribute('aria-expanded', 'false');
+        }));
+        $('#filterRow').addEventListener('click', (event) => {
+          const button = event.target.closest('[data-filter]');
+          if (!button) return;
+          state.activeFilter = button.dataset.filter;
+          renderProjects();
+        });
+        $('#projectGrid').addEventListener('click', (event) => {
+          const button = event.target.closest('[data-open-project]');
+          if (button) openProject(button.dataset.openProject);
+        });
+        $('#adminTrigger').addEventListener('click', openAdmin);
+        $('#closeAdmin').addEventListener('click', closeAdmin);
+        $('#signOutButton').addEventListener('click', async () => {
+          const { error } = await state.client.auth.signOut();
+          if (error) return toast(error.message, 'error');
+          state.session = null; state.isAdmin = false; closeAdmin(); toast('Signed out.', 'success');
+        });
+        $('#loginForm').addEventListener('submit', signIn);
+        $('#forgotPassword').addEventListener('click', resetPassword);
+        $('[data-close-modal]').addEventListener('click', closeProjectModal);
+        $('[data-close-auth]').addEventListener('click', closeAuth);
+        $('#projectModalLayer').addEventListener('click', (event) => { if (event.target === event.currentTarget) closeProjectModal(); });
+        $('#authModalLayer').addEventListener('click', (event) => { if (event.target === event.currentTarget) closeAuth(); });
+        $('#adminContent').addEventListener('click', async (event) => {
+          const copy = event.target.closest('[data-copy-sql]');
+          if (!copy) return;
+          try { await navigator.clipboard.writeText(sqlSetup); toast('SQL copied to clipboard.', 'success'); }
+          catch { toast('Clipboard access was blocked. Select and copy the SQL manually.', 'error'); }
+        });
+        document.addEventListener('keydown', (event) => {
+          if (event.key !== 'Escape') return;
+          if ($('#projectModalLayer').classList.contains('is-open')) closeProjectModal();
+          else if ($('#authModalLayer').classList.contains('is-open')) closeAuth();
+          else if ($('#adminDrawer').classList.contains('is-open')) closeAdmin();
+        });
+      }
+
+      async function init() {
+        setSocialLink('#youtubeLink', SOCIAL_URLS.youtube, 'YouTube');
+        setSocialLink('#instagramLink', SOCIAL_URLS.instagram, 'Instagram');
+        setSocialLink('#threadsLink', SOCIAL_URLS.threads, 'Threads');
+        ensureLogo();
+        applySettings();
+        renderProjects();
+        bindEvents();
+        await initializeClient();
+        await loadPublicData();
+      }
+
+      // Wait for deferred Supabase UMD bundle before initializing.
+      window.addEventListener('DOMContentLoaded', () => window.setTimeout(init, 0));
+    })();
+  </script>
+</body>
+</html>
