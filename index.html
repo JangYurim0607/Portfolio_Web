@@ -986,6 +986,19 @@ on conflict (user_id) do nothing;`;
         } else {
           state.projects = (projectsResult.data || []).filter((project) => includeUnpublished || project.published !== false);
         }
+        if (!includeUnpublished) {
+          state.projects.push({
+            id: 'static-bookstore-game',
+            title: '똑딱이의 원고 대작전',
+            category: 'Game',
+            year: '2026',
+            description: '숲속 동물마을의 서점 주인 딱따구리 똑딱이가 작가들에게 원고를 받아오는 브라우저 게임. Claude Code로 제작 (HTML 단일 파일).',
+            credit: '장유림',
+            video_url: 'https://coffee-delivery-game-week3-bookstor.vercel.app',
+            gallery_paths: [],
+            published: true
+          });
+        }
         applySettings();
         renderProjects();
       }
